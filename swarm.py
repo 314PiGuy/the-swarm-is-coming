@@ -1,4 +1,4 @@
-#Using bluetooth to control multiple xrp robots through an app
+#Using bluetooth to control multiple xrp robots through an app.
 
 import bluetooth
 import io
@@ -54,26 +54,61 @@ _ADV_NONCONN_IND = const(0x03)
 _SCAN_RSP = const(0x04)
 
 #UART: Way of transmitting data between bluetooth devices
-_UART_UUID = bluetooth.UUID("51ff9301-d04e-4a0d-91c9-975fca9cdf95")
-_UART_TX = (
+_UUID = bluetooth.UUID("51ff9301-d04e-4a0d-91c9-975fca9cdf95")
+_NAME = (
     bluetooth.UUID("cf556646-2b41-4888-9e6a-ea97d6b37175"),
-    _FLAG_READ | _FLAG_NOTIFY,
+    _FLAG_READ | _FLAG_NOTIFY
 )
-_UART_RX = (
+_COMMAND = (
     bluetooth.UUID("ed59696a-b609-4cea-a09a-5885cce3c5ca"),
-    _FLAG_WRITE | _FLAG_WRITE_NO_RESPONSE,
+    _FLAG_WRITE | _FLAG_WRITE_NO_RESPONSE
 )
-_UART_SERVICE = (
-    _UART_UUID,
-    (_UART_TX, _UART_RX),
+_SERVICE = (
+    _UUID,
+    (_NAME, _COMMAND)
 )
 
 class SwarmAgent:
     def __init__(self, p_name, p_children=False):
-        self.name=p_name
+        self.name=p_name[:8]
         self.children=p_children
         self._ble = bluetooth.BLE()
         self._ble.active(True)
-        self._ble.irq(self._irq)
+        self._ble.irq(self.periodic)
+        ((self._handle_tx, self._handle_rx),) = self._ble.gatts_register_services((_SERVICE,))
+        self.parent_handle=""
+        self.connected_children=set()
+        print("Advertising")
+        self._ble.gap_advertise()
     def periodic(self, event, data):
-        pass
+        #These events are for interactions between the device and its parent
+        if(event==_IRQ_CENTRAL_CONNECT):
+            # A central has connected to this peripheral.
+            conn_handle, addr_type, addr = data
+            print("Connected to device:" + conn_handle)
+            parent_handle=conn_handle
+            pass
+        elif(event==_IRQ_CENTRAL_DISCONNECT):
+            # A central has disconnected from this peripheral.
+            conn_handle, addr_type, addr = data
+            print("Disconnected from parent")
+            parent_handle=""
+            pass
+        elif event == _IRQ_GATTS_WRITE:
+            # A client has written to this characteristic or descriptor.
+            conn_handle, value_handle = data
+
+        #An event for scanning for devices to connect
+        elif(event==_IRQ_SCAN_RESULT):
+            # A single scan result.
+            addr_type, addr, adv_type, rssi, adv_data = data
+            pass
+    
+    def connected_to_central(self) -> bool:
+        return len(self.parent_handle)>0
+    
+    
+
+
+
+

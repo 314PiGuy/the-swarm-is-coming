@@ -75,17 +75,19 @@ class SwarmAgent:
         self._ble = bluetooth.BLE()
         self._ble.active(True)
         self._ble.irq(self.periodic)
-        ((self._handle_tx, self._handle_rx),) = self._ble.gatts_register_services((_SERVICE,))
+        ((self._tname, self._command),) = self._ble.gatts_register_services((_SERVICE,))
         self.parent_handle=""
         self.connected_children=set()
+        self.next_action=False
         print("Advertising")
-        self._ble.gap_advertise()
+        self._ble.gap_advertise(500000,) #TODO: Add correct parameters for gap_advertise. These include the interval and a payload.
     def periodic(self, event, data):
         #These events are for interactions between the device and its parent
         if(event==_IRQ_CENTRAL_CONNECT):
             # A central has connected to this peripheral.
             conn_handle, addr_type, addr = data
             print("Connected to device:" + conn_handle)
+            self._ble.gap_advertise(0)
             parent_handle=conn_handle
             pass
         elif(event==_IRQ_CENTRAL_DISCONNECT):
@@ -97,7 +99,11 @@ class SwarmAgent:
         elif event == _IRQ_GATTS_WRITE:
             # A client has written to this characteristic or descriptor.
             conn_handle, value_handle = data
-
+            if value_handle==self._tname and self._ble.gatts_read(self._tname).decode('utf-8')==self.name:
+                self.next_action=True
+            elif value_handle==self._command and self.next_action:
+                #TODO:Figure out how to convert byte array into working commands to drive and turn the robot
+                pass
         #An event for scanning for devices to connect
         elif(event==_IRQ_SCAN_RESULT):
             # A single scan result.

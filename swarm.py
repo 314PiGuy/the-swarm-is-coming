@@ -6,6 +6,7 @@ import os
 import micropython
 from micropython import const
 import machine
+from XRPLib.defaults import *
 
 #IRQ events
 _IRQ_CENTRAL_CONNECT = const(1)
@@ -67,7 +68,6 @@ _SERVICE = (
     _UUID,
     (_NAME, _COMMAND)
 )
-
 class SwarmAgent:
     def __init__(self, p_name, p_children=False):
         self.name=p_name[:8]
@@ -101,17 +101,46 @@ class SwarmAgent:
             conn_handle, value_handle = data
             if value_handle==self._tname and self._ble.gatts_read(self._tname).decode('utf-8')==self.name:
                 self.next_action=True
-            elif value_handle==self._command and self.next_action:
-                #TODO:Figure out how to convert byte array into working commands to drive and turn the robot
-                pass
+                # If the value written is the target name, and the name matches the robot's name, a variable to check
+                # if the robot does the next command is set to be true
+            elif value_handle==self._command:
+                # The following if statement checks if the robot should follow the given command
+                if self.next_action:
+                    self.next_action=False
+                    commands=self._ble.gatts_read(self._command)
+                    if(commands[0]==0):
+                        drivetrain.turn(commands[1])
+                    else:
+                        drivetrain.turn(-commands[1])
+                    commands=commands[2:]
+                    drive_distance=0
+                    for i in range(len(commands)):
+                        drive_distance+= #TODO: need to convert base 256 to base 10
+                        pass
+                    drivetrain.straight(drive_distance)
+                    # If it should, it reads the command from the central device. commands[0] dictates if the turn value is negative
+                    # commands[1] is the amount of turn degrees. commands[2] and onward
+                else:
+                    for connection in self.connected_children:
+                        self._ble.gattc_write(connection, self._tname, self._ble.gatts_read(self._tname))
+        elif event == _IRQ_GATTC_WRITE_DONE:
+        # A gattc_write() has completed.
+        # Note: Status will be zero on success, implementation-specific value otherwise.
+            conn_handle, value_handle, status = data
+            if value_handle==self._tname:
+                self._ble.gattc_write(conn_handle, self._command, self._ble.gatts_read(self._command))#TODO: Figure out what data to be passed into this function. Assuming the command
+                                                         # is going to be added to a parameter?
+
         #An event for scanning for devices to connect
         elif(event==_IRQ_SCAN_RESULT):
             # A single scan result.
             addr_type, addr, adv_type, rssi, adv_data = data
             pass
-    
+
+            
     def connected_to_central(self) -> bool:
         return len(self.parent_handle)>0
+    
     
     
 

@@ -121,32 +121,31 @@ def advertising_payload(limited_disc=False, br_edr=False, name=None, services=No
 
     return payload
 
-#The following methods are not needed, but kept in case of future use
 
-# def decode_field(payload, adv_type):
-#     i = 0
-#     result = []
-#     while i + 1 < len(payload):
-#         if payload[i + 1] == adv_type:
-#             result.append(payload[i + 2 : i + payload[i] + 1])
-#         i += 1 + payload[i]
-#     return result
-
-
-# def decode_name(payload):
-#     n = decode_field(payload, _ADV_TYPE_NAME)
-#     return str(n[0], "utf-8") if n else ""
+def decode_field(payload, adv_type):
+    i = 0
+    result = []
+    while i + 1 < len(payload):
+        if payload[i + 1] == adv_type:
+            result.append(payload[i + 2 : i + payload[i] + 1])
+        i += 1 + payload[i]
+    return result
 
 
-# def decode_services(payload):
-#     services = []
-#     for u in decode_field(payload, _ADV_TYPE_UUID16_COMPLETE):
-#         services.append(bluetooth.UUID(struct.unpack("<h", u)[0]))
-#     for u in decode_field(payload, _ADV_TYPE_UUID32_COMPLETE):
-#         services.append(bluetooth.UUID(struct.unpack("<d", u)[0]))
-#     for u in decode_field(payload, _ADV_TYPE_UUID128_COMPLETE):
-#         services.append(bluetooth.UUID(u))
-#     return services
+def decode_name(payload):
+    n = decode_field(payload, _ADV_TYPE_NAME)
+    return str(n[0], "utf-8") if n else ""
+
+
+def decode_services(payload):
+    services = []
+    for u in decode_field(payload, _ADV_TYPE_UUID16_COMPLETE):
+        services.append(bluetooth.UUID(struct.unpack("<h", u)[0]))
+    for u in decode_field(payload, _ADV_TYPE_UUID32_COMPLETE):
+        services.append(bluetooth.UUID(struct.unpack("<d", u)[0]))
+    for u in decode_field(payload, _ADV_TYPE_UUID128_COMPLETE):
+        services.append(bluetooth.UUID(u))
+    return services
 #endregion
 class SwarmAgent:
     def __init__(self, p_name, p_children=False):

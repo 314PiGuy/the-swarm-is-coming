@@ -17,6 +17,6 @@ async function connect(){
 
 async function send(data){
     for (var c in XRPcommands){
-        c.writeValueWithoutResponse();
+        c.writeValueWithoutResponse(data);
     }
 }

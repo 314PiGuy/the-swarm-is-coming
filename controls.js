@@ -27,15 +27,16 @@ var config = {
 var game = new Phaser.Game(config);
 
 class XRP {
-    constructor(dir) {
-        this.dir = dir
+    constructor(id, dir) {
+        this.id = id;
+        this.dir = dir;
         this.command = {
             'vx': 0,
             'vy': 0,
             'vr': 0,
             'ticks': 0,
             'rticks': 0
-        }
+        };
     }
 }
 
@@ -62,19 +63,22 @@ function getAngle(x0, y0, x1, y1, dir) {
    
 }
 
-
-
 function preload() {
     this.load.image('rick', 'assets/rick.jpg');
     this.load.image('grass', 'assets/grass.png');
+    this.load.audio('roll', 'assets/rick.mp3');
 }
 
 function create() {
+    const bgmusic = this.sound.add('roll');
+    bgmusic.loop = true;
+    bgmusic.play()
+    
     this.grass = this.add.sprite(400, 400, 'grass').setInteractive();
 
     for (var n = 1; n < 4; n++){
         sprites.push(this.add.sprite(100*n, 100, 'rick').setInteractive());
-        XRPs.push(new XRP(0));
+        XRPs.push(new XRP(n, 0));
     }
 
     for (let i = 0; i < sprites.length; i++){
@@ -90,6 +94,7 @@ function create() {
             const h = Math.sqrt(dx ** 2 + dy ** 2);
             const sprite = sprites[selected];
             var angle = -(getAngle(sprite.x, sprite.y, game.input.mousePointer.x, game.input.mousePointer.y, XRPs[selected].dir));
+            sendCommand(XRPs[selected].id, -angle, h);
             XRPs[selected].command.rticks = Math.floor((angle) / 0.8);
             XRPs[selected].command.vr = 0.8;
             if (XRPs[selected].command.rticks < 0){
@@ -122,8 +127,12 @@ function update() {
     }
 }
 
-function sendCommand(turn, drive){
-    
+function sendCommand(id, turn, drive){
+    const data = new Uint8Array(5);
+    data[0] = id;
+    data[1] = turn > 0 ? 1 : 0;
+    data[2] = Math.abs(turn);
+    data[3] = Math.floor(drive/100);
+    data[4] = drive%100;
+    send(data);
 }
-
-let ble = createBleAgent()

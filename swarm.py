@@ -212,6 +212,12 @@ class SwarmAgent:
             # Connected peripheral has disconnected.
             conn_handle, addr_type, addr = data
             self.connected_children.remove(conn_handle)
+        
+        #Event for when a child writes to the parent
+        elif event==_IRQ_GATTC_NOTIFY:
+            # A server has sent a notify request.
+            conn_handle, value_handle, notify_data = data
+            self._ble.gatts_notify(parent_handle, value_handle, notify_data)
 
     #checks if device is connected to parent   
     def connected_to_central(self) -> bool:

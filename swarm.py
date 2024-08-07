@@ -71,17 +71,13 @@ _ADV_MAX_PAYLOAD = const(31)
 
 #region Main Service
 _UUID = bluetooth.UUID("51ff9301-d04e-4a0d-91c9-975fca9cdf95")
-_NAME = (
-    bluetooth.UUID("cf556646-2b41-4888-9e6a-ea97d6b37175"),
-    _FLAG_READ | _FLAG_NOTIFY
-)
 _COMMAND = (
     bluetooth.UUID("ed59696a-b609-4cea-a09a-5885cce3c5ca"),
     _FLAG_WRITE | _FLAG_WRITE_NO_RESPONSE
 )
 _SERVICE = (
     _UUID,
-    (_NAME, _COMMAND)
+    (_COMMAND,)
 )
 #endregion
 
@@ -148,18 +144,19 @@ def decode_services(payload):
     return services
 #endregion
 class SwarmAgent:
-    def __init__(self, p_name, p_children=False):
-        self.name=p_name[:8]
+    def __init__(self, p_number, p_children=False):
+        self.number=p_number
         self.children=p_children
         self._ble = bluetooth.BLE()
         self._ble.active(True)
         self._ble.irq(self.periodic)
-        ((self._tname, self._command),) = self._ble.gatts_register_services((_SERVICE,))
+        ((self._command,),) = self._ble.gatts_register_services((_SERVICE,))
         self.parent_handle=""
         self.connected_children=set()
-        self.next_action=False
         print("Advertising")
-        self._ble.gap_advertise(500000, advertising_payload(name=self.name, services=[_UUID])) #TODO: Add correct parameters for gap_advertise. These include the interval and a payload.
+        self._ble.gap_advertise(500000, advertising_payload(name=str(self.number), services=[_UUID])) #TODO: Add correct parameters for gap_advertise. These include the interval and a payload.
+        (self.x, self.y)=(0,0)
+        imu.reset()
     
     #This function runs every time an event occurs, having a parameter for the type of the event and the data the event contains
     def periodic(self, event, data):
@@ -168,7 +165,7 @@ class SwarmAgent:
             # A central has connected to this peripheral.
             conn_handle, addr_type, addr = data
             print("Connected to device:" + conn_handle)
-            self._ble.gap_advertise(0)
+            self._ble.gap_advertise(None)
             parent_handle=conn_handle
             if self.children==True and len(self.connected_children)<6:
                 self._ble.gap_scan(0)
@@ -182,38 +179,20 @@ class SwarmAgent:
         elif event == _IRQ_GATTS_WRITE:
             # A client has written to this characteristic or descriptor.
             conn_handle, value_handle = data
-            if value_handle==self._tname and self._ble.gatts_read(self._tname).decode('utf-8')==self.name:
-                self.next_action=True
-                # If the value written is the target name, and the name matches the robot's name, a variable to check
-                # if the robot does the next command is set to be true
-            elif value_handle==self._command:
-                # The following if statement checks if the robot should follow the given command
-                if self.next_action:
-                    self.next_action=False
-                    commands=self._ble.gatts_read(self._command)
-                    if(commands[0]==0):
-                        drivetrain.turn(commands[1]) # type: ignore
-                    else:
-                        drivetrain.turn(-commands[1]) # type: ignore
-                    commands=commands[2:]
-                    drive_distance=0
-                    for i in range(len(commands)):
-                        drive_distance+= commands[i] * math.pow(256, len(commands)-1)#TODO: need to convert base 256 to base 10
-                        pass
-                    drivetrain.straight(drive_distance) # type: ignore
-                    # If it should, it reads the command from the central device. commands[0] dictates if the turn value is negative
-                    # commands[1] is the amount of turn degrees. commands[2] and onward
+            commands=self._ble.gatts_read(self._command)
+            if commands[0]==self.number:
+                if(commands[1]==0):
+                    drivetrain.turn(commands[2]) # type: ignore
                 else:
-                    for connection in self.connected_children:
-                        self._ble.gattc_write(connection, self._tname, self._ble.gatts_read(self._tname))
-        elif event == _IRQ_GATTC_WRITE_DONE:
-        # A gattc_write() has completed.
-        # Note: Status will be zero on success, implementation-specific value otherwise.
-            conn_handle, value_handle, status = data
-            if value_handle==self._tname:
-                self._ble.gattc_write(conn_handle, self._command, self._ble.gatts_read(self._command))#TODO: Figure out what data to be passed into this function. Assuming the command
-                                                         # is going to be added to a parameter?
-
+                    drivetrain.turn(-commands[2]) # type: ignore
+                notify_data=bytearray()
+                drivetrain.straight(commands[3]*100+commands[4]) # type: ignore
+                self._ble.gatts_notify(parent_handle, self._command, bytearray(self.number.to_bytes(1, 'big')))
+                # If it should, it reads the command from the central device. commands[0] dictates if the turn value is negative
+                # commands[1] is the amount of turn degrees. commands[2] and onward
+            else:
+                for connection in self.connected_children:
+                    self._ble.gattc_write(connection, self._command, commands)
         #Events for scanning for devices to connect
         elif(event==_IRQ_SCAN_RESULT):
             # A single scan result.
@@ -225,6 +204,8 @@ class SwarmAgent:
             # A successful gap_connect().
             conn_handle, addr_type, addr = data
             self.connected_children.add(conn_handle)
+            if len(self.connected_children)==6:
+                self._ble.gap_scan(None)
 
         #Event for when a child disconnects
         elif event == _IRQ_PERIPHERAL_DISCONNECT:

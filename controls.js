@@ -2,6 +2,7 @@ var XRPs = [];
 var sprites = [];
 selected = -1
 
+
 var config = {
     type: Phaser.AUTO,
     width: 800,
@@ -120,3 +121,9 @@ function update() {
         }
     }
 }
+
+function sendCommand(turn, drive){
+    
+}
+
+let ble = createBleAgent()

@@ -28,6 +28,7 @@ var game = new Phaser.Game(config);
 
 class XRP {
     constructor(id, dir) {
+        this.locked = false;
         this.id = id;
         this.dir = dir;
         this.command = {
@@ -83,7 +84,7 @@ function create() {
 
     for (let i = 0; i < sprites.length; i++){
         sprites[i].on('pointerdown', function (pointer) {
-            selected = i;
+            if (XRPs[i].locked == false) selected = i;
         });
     }
 
@@ -95,6 +96,7 @@ function create() {
             const sprite = sprites[selected];
             var angle = -(getAngle(sprite.x, sprite.y, game.input.mousePointer.x, game.input.mousePointer.y, XRPs[selected].dir));
             sendCommand(XRPs[selected].id, -angle, h);
+            XRPs[selected].locked = true;
             XRPs[selected].command.rticks = Math.floor((angle) / 0.8);
             XRPs[selected].command.vr = 0.8;
             if (XRPs[selected].command.rticks < 0){

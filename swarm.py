@@ -4,7 +4,6 @@ import bluetooth
 import io
 import os
 import micropython
-from micropython import const
 import machine
 from XRPLib.defaults import *
 import math

@@ -71,9 +71,9 @@ function preload() {
 }
 
 function create() {
-    const bgmusic = this.sound.add('roll');
-    bgmusic.loop = true;
-    bgmusic.play()
+    // const bgmusic = this.sound.add('roll');
+    // bgmusic.loop = true;
+    // bgmusic.play()
     
     this.grass = this.add.sprite(400, 400, 'grass').setInteractive();
 

@@ -273,6 +273,7 @@ class SwarmAgent:
             # The connection handle is added to the XRP's set and if the XRP has 6 children, it stops scanning for bluetooth devices.
             conn_handle, addr_type, addr = data
             self.connected_children.add(conn_handle)
+            print("A child has connected:" + conn_handle)
             if len(self.connected_children)==6:
                 self._ble.gap_scan(None)
 
@@ -282,6 +283,7 @@ class SwarmAgent:
             # The child is removed from the set of children
             conn_handle, addr_type, addr = data
             self.connected_children.remove(conn_handle)
+            print("A child has disconnected")
         
         #Event for when a child writes to the parent
         elif event==_IRQ_GATTC_NOTIFY:
@@ -293,10 +295,3 @@ class SwarmAgent:
     #checks if device is connected to parent   
     def connected_to_central(self) -> bool:
         return len(self.parent_handle)>0
-    
-    
-    
-
-
-
-

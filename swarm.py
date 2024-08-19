@@ -289,7 +289,6 @@ class SwarmAgent:
             conn_handle, value_handle, notify_data = data
             #The XRP notifies its parent, until the notification reaches the central device
             self._ble.gatts_notify(parent_handle, value_handle, notify_data)
-
     #checks if device is connected to parent   
     def connected_to_central(self) -> bool:
         return len(self.parent_handle)>0
